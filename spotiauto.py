@@ -116,10 +116,35 @@ def get_volume_for_mood(mood: str) -> int:
     }
     return volume_levels.get(mood, 50)  # Default to 50 if mood is not found
 
+def get_current_track() -> Optional[str]:
+    """
+    Retrieve the currently playing track's name, artist, and album in Spotify.
+    Returns a formatted string with the track information, or None if no track is playing.
+    """
+    script = '''
+    tell application "Spotify"
+        if player state is playing then
+            set track_name to name of current track
+            set track_artist to artist of current track
+            set track_album to album of current track
+            return track_name & " by " & track_artist & " from the album " & track_album
+        else
+            return "No track is currently playing."
+        end if
+    end tell
+    '''
+    try:
+        track_info = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True).stdout.strip()
+        return track_info if track_info else None
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error retrieving current track: {e}")
+        return None
+
 def validate_mood_and_play_playlist(mood: Optional[str], mood_playlists: dict) -> None:
     """
     Validate the mood and play the corresponding playlist.
     Set shuffle mode and adjust the volume based on the user's preferences and mood.
+    Display the currently playing track.
     """
     if mood:
         playlist_uri = mood_playlists.get(mood)
@@ -145,6 +170,13 @@ def validate_mood_and_play_playlist(mood: Optional[str], mood_playlists: dict) -
 
             # Play the playlist with the appropriate shuffle setting
             play_playlist(playlist_uri, shuffle)
+
+            # Get and display the currently playing track
+            track_info = get_current_track()
+            if track_info:
+                logging.info(f"Currently playing: {track_info}")
+            else:
+                logging.warning("No track is currently playing.")
         else:
             logging.warning(f"No playlist found for mood: {mood}")
     else:
