@@ -1,3 +1,2 @@
 # My Project
- a python script to automate playing music on spotify
- it plays music based on your moods
+This script will automate your Spotify app based on the user's mood, making the experience more interactive! 
