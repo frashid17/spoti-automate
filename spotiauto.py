@@ -39,6 +39,47 @@ def get_shuffle_preference() -> bool:
         logging.error(f"Error in getting shuffle preference: {e}")
         return False  # Default to shuffle off in case of error
 
+def check_spotify_running() -> bool:
+    """
+    Check if the Spotify application is currently running.
+    Returns True if Spotify is running, False otherwise.
+    """
+    script = 'tell application "System Events" to (name of processes) contains "Spotify"'
+    try:
+        result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True).stdout.strip()
+        return result == 'true'
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error checking Spotify running status: {e}")
+        return False
+
+def offer_to_open_spotify() -> bool:
+    """
+    Ask the user if they want to open Spotify if it's not running.
+    Returns True if the user wants to open Spotify, False otherwise.
+    """
+    script = '''
+    display dialog "Spotify is not running. Do you want to open it?" buttons {"Yes", "No"} default button "Yes"
+    set user_choice to button returned of result
+    return user_choice
+    '''
+    try:
+        user_choice = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, check=True).stdout.strip()
+        return user_choice == "Yes"
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error in getting user's choice to open Spotify: {e}")
+        return False
+
+def open_spotify() -> None:
+    """
+    Open the Spotify application.
+    """
+    try:
+        subprocess.run(['open', '-a', 'Spotify'], check=True)
+        logging.info("Spotify is now opening...")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to open Spotify: {e}")
+        sys.exit(1)
+
 def control_spotify(command: str) -> None:
     """
     Use AppleScript to control the Spotify desktop app on macOS.
@@ -84,10 +125,19 @@ def validate_mood_and_play_playlist(mood: Optional[str], mood_playlists: dict) -
         playlist_uri = mood_playlists.get(mood)
         if playlist_uri:
             logging.info(f"Playing {mood} playlist...")
-            
+
+            # Check if Spotify is running
+            if not check_spotify_running():
+                logging.warning("Spotify is not running.")
+                if offer_to_open_spotify():
+                    open_spotify()
+                else:
+                    logging.info("Spotify is not opened. Exiting.")
+                    sys.exit(0)
+
             # Get the shuffle preference
             shuffle = get_shuffle_preference()
-            
+
             # Get the volume level based on the mood
             volume = get_volume_for_mood(mood)
             logging.info(f"Setting volume to {volume} for mood {mood}")
