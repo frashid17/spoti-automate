@@ -110,9 +110,9 @@ def get_volume_for_mood(mood: str) -> int:
     """
     volume_levels = {
         "Happy": 70,
-        "Sad": 50,
-        "Chill": 40,
-        "Energetic": 80
+        "Sad": 60,
+        "Chill": 50,
+        "Energetic": 100
     }
     return volume_levels.get(mood, 50)  # Default to 50 if mood is not found
 
